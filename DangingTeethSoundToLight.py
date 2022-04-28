@@ -23,9 +23,6 @@ lat_button_pin = 4  # Latching switch GPIO designation - physical pin is 7 with 
 idleWait = 0.01  # 10ms to save on CPU cycles whilst PTT is disengaged
 latchWait = 0.1  # 100ms to save on CPU cycles whilst looping waiting for display activation
 
-# LED panel config/init for GPIO. Using SPI actually makes it slower!!
-pixels = neopixel.NeoPixel(pixel_pin, num_pixels, brightness=brightness, auto_write=False, pixel_order=order)
-
 # Define Teeth Resting State
 tooth1 = [0, 1, 14, 17, 16]
 tooth2 = [31, 30, 29, 34, 45, 46, 47]
@@ -253,6 +250,9 @@ def resetTeeth():
 ## End of blankPixels function ##
 ########################################################################################################################
 ## Start prep ##
+
+# LED panel init for GPIO. Using SPI actually makes it slower!!
+pixels = neopixel.NeoPixel(pixel_pin, num_pixels, brightness=brightness, auto_write=False, pixel_order=order)
 
 # Initialise buttons
 GPIO.setup(mom_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
