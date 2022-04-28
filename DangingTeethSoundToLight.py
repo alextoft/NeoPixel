@@ -3,211 +3,321 @@ import board
 import neopixel
 import random
 import pyaudio
-import numpy as np
 import audioop
-import math
+import RPi.GPIO as GPIO
 
-###########################################################################################################################
-
+########################################################################################################################
 ## START CONFIG SECTION ##
 
 # GPIO control settings
-pixel_pin =     board.D18
-num_pixels =    256
-order =         neopixel.GRB
-brightness =    0.7
+pixel_pin = board.D18  # GPIO pin - physical pin 12
+num_pixels = 256
+order = neopixel.GRB
+brightness = 0.2
 
+# Button config
+mom_button_pin = 22  # Momentary switch GPIO pin designation - physical pin is 15 with physical pin 17 as 3.3v source
+lat_button_pin = 4  # Latching switch GPIO designation - physical pin is 7 with physical pin 1 as 3.3v source
+# Initialise the pins for the 2 available buttons
+GPIO.setup(mom_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
+GPIO.setup(lat_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
+idleWait = 0.01  # 10ms to save on CPU cycles whilst PTT is disengaged
+latchWait = 0.1  # 50ms to save on CPU cycles whilst looping waiting for display activation
 # LED panel config/init for GPIO. Using SPI actually makes it slower!!
-pixels =        neopixel.NeoPixel(pixel_pin, num_pixels, brightness=brightness, auto_write=False, pixel_order=order)
+pixels = neopixel.NeoPixel(pixel_pin, num_pixels, brightness=brightness, auto_write=False, pixel_order=order)
 
 # Define Teeth Resting State
-tooth1 =        [ 0, 1, 14, 15, 17, 16 ]
-tooth2 =        [ 32, 33, 34, 45, 46, 47, 50, 49, 48 ]
-tooth3 =        [ 64, 65, 66, 67, 76, 77, 78, 79, 83, 82, 81, 80 ]
-tooth4 =        [ 96, 97, 98, 99, 108, 109, 110, 111, 115, 114, 113, 112 ]   
-tooth5 =        [ 128, 129, 130, 141, 142, 143, 146, 145, 144 ]
-tooth6 =        [ 160, 161, 174, 177, 175, 176 ]
-teeth =         [ tooth1, tooth2, tooth3, tooth4, tooth5, tooth6 ]
+tooth1 = [0, 1, 14, 17, 16]
+tooth2 = [31, 30, 29, 34, 45, 46, 47]
+tooth3 = [48, 49, 50, 51, 60, 67, 66, 65, 64]
+tooth4 = [79, 78, 77, 76, 75, 84, 92, 91, 93, 94, 95]
+tooth5 = [96, 97, 98, 109, 114, 113, 112]
+tooth6 = [127, 126, 129, 142, 143]
+teeth = [tooth1, tooth2, tooth3, tooth4, tooth5, tooth6]
 
 # Teeth Limits (Low/High Pixels)
-tlow1 =         [ 1, 14, 17 ]
-tlow2 =         [ 34, 45, 50 ]
-tlow3 =         [ 67, 76, 83 ]
-tlow4 =         [ 99, 108, 115 ]
-tlow5 =         [ 130, 141, 146 ]
-tlow6 =         [ 161, 174, 177 ] 
-tlow =          [ tlow1, tlow2, tlow3, tlow4, tlow5, tlow6 ]
+tlow1 = [1, 14, 17]
+tlow2 = [29, 34, 45]
+tlow3 = [51, 60, 67]
+tlow4 = [76, 83, 92]
+tlow5 = [98, 109, 114]
+tlow6 = [126, 129, 142]
+tlow = [tlow1, tlow2, tlow3, tlow4, tlow5, tlow6]
 
-thigh1 =        [ 7, 8, 23 ]
-thigh2 =        [ 39, 40, 55 ]
-thigh3 =        [ 71, 72, 87 ]
-thigh4 =        [ 103, 104, 119 ]
-thigh5 =        [ 135, 136, 151 ]
-thigh6 =        [ 167, 168, 183 ]
-thigh =         [ thigh1, thigh2, thigh3, thigh4, thigh5, thigh6 ]
+thigh1 = [7, 8, 23]
+thigh2 = [24, 39, 40]
+thigh3 = [55, 56, 71]
+thigh4 = [72, 87, 88]
+thigh5 = [103, 114, 119]
+thigh6 = [120, 135, 136]
+thigh = [thigh1, thigh2, thigh3, thigh4, thigh5, thigh6]
+
+blow1 = [1, 14, 17]
+blow2 = [30, 33, 46]
+blow3 = [49, 62, 65]
+blow4 = [78, 81, 94]
+blow5 = [97, 110, 113]
+blow6 = [126, 129, 142]
+blow = [blow1, blow2, blow3, blow4, blow5, blow6]
+
+# Use tlow to bounce to normal teeth, or blow to allow teeth to equaise to 2px deep
+lowtouse = blow
 
 # Define RGB colours we are going to use
-on =            [ 0, 255, 0 ]
-off =           [ 0, 0, 0 ]
-dim =           [ 0, 80, 0 ]
-red =           [ 255, 0, 0 ]
-yellow =        [ 255, 255, 0 ]
-orange =        [ 230, 215, 0 ]
+off = [0, 0, 0]
+lg = [0, 255, 0]
+dg = [0, 255, 20]
+ly = [255, 255, 0]
+dy = [204, 204, 20]
+lr = [255, 0, 0]
+dr = [255, 0, 20]
 
 # Misc vars to prevent repeated teeth bouncess during randomisation
-last =          0
-index =         0
+last = 0
+index = 0
 
 # Audio config settings - based on Alesis Core 1 input specs
-chunk =         1024
-freq =          48000
-chans =         1
+chunk = 1024
+freq = 48000
+chans = 1
 
-# EQ Bandings
-eq1 =           (100, 100)
-eq2 =           (200, 200)
-eq3 =           (400, 400)
-eq4 =           (800, 8000)
-eq5 =           (1500, 1500)
-eq6 =           (3000, 3000)
-eq =            [ eq1, eq2, eq3, eq4, eq5, eq6 ] 
+thresh1 = 9000
+thresh2 = 10000
+thresh3 = 12000
+thresh4 = 15000
+thresh5 = 19000
+thresh6 = 24000
+
+# Multithread tooth sequences combinations
+seq1 = "012345"
+seq2 = "123450"
+seq3 = "234501"
+seq4 = "345012"
+seq5 = "450123"
+seq6 = "501234"
+seq = [seq1, seq2, seq3, seq4, seq5, seq6]
+
 
 ## END CONFIG SECTION ##
+########################################################################################################################
 
-###########################################################################################################################
+########################################################################################################################
+def bounce(index, brms):
+    print("Bouncing tooth: " + str(index + 1))
+    # Get thresholds
+    low = lowtouse[index]
+    high = thigh[index]
+    state = low
 
-def freqanalyse(samples, sample_rate, *freqs):
-    """
-    Implementation of the Goertzel algorithm, useful for calculating individual
-    terms of a discrete Fourier transform.
+    # Processing for D-U-D columns
+    # Add line for tooth
+    while (state[0] < high[0]) and (index == 0 or index == 2 or index == 4):
+        if (state[0] == high[0] - 1) and (brms > thresh6):
+            pixels[state[0] + 1] = lr
+            pixels[state[1] - 1] = lr
+            pixels[state[2] + 1] = lr
+        elif state[0] == high[0] - 2 and (brms > thresh5):
+            pixels[state[0] + 1] = ly
+            pixels[state[1] - 1] = ly
+            pixels[state[2] + 1] = ly
+        elif state[0] == high[0] - 3 and (brms > thresh4):
+            pixels[state[0] + 1] = lg
+            pixels[state[1] - 1] = lg
+            pixels[state[2] + 1] = lg
+        elif state[0] == high[0] - 4 and (brms > thresh3):
+            pixels[state[0] + 1] = lg
+            pixels[state[1] - 1] = lg
+            pixels[state[2] + 1] = lg
+        elif state[0] == high[0] - 5 and (brms > thresh2):
+            pixels[state[0] + 1] = lg
+            pixels[state[1] - 1] = lg
+            pixels[state[2] + 1] = lg
+        elif state[0] == high[0] - 6 and (brms > thresh1):
+            pixels[state[0] + 1] = lg
+            pixels[state[1] - 1] = lg
+            pixels[state[2] + 1] = lg
+        # Remove Centre Pixel Above
+        pixels[state[1]] = off
+        # Write new pixel config to panel
+        pixels.show()
+        # Track the current row position state
+        state = [state[0] + 1, state[1] - 1, state[2] + 1]
 
-    `samples` is a windowed one-dimensional signal originally sampled at `sample_rate`.
+    # Remove lowest line for tooth
+    while (state[0] > low[0]) and (index == 0 or index == 2 or index == 4):
+        # Ascend Line
+        pixels[state[0] - 1] = lg
+        pixels[state[1] + 1] = lg
+        pixels[state[2] - 1] = lg
+        # Remove Line Below
+        pixels[state[0]] = off
+        pixels[state[1]] = off
+        pixels[state[2]] = off
+        pixels.show()
+        state = [state[0] - 1, state[1] + 1, state[2] - 1]
 
-    The function returns 2 arrays, one containing the actual frequencies calculated,
-    the second the coefficients `(real part, imag part, power)` for each of those frequencies.
-    For simple spectral analysis, the power is usually enough.
+    ##########################################################################################
 
-    Example of usage :
-        
-        freqs, results = goertzel(some_samples, 44100, (400, 500), (1000, 1100))
-    """
-    window_size = len(samples)
-    f_step = sample_rate / float(window_size)
-    f_step_normalized = 1.0 / window_size
+    # Processing for U-D-U columns
+    # Add line for tooth
+    while (state[1] < high[1]) and (index == 1 or index == 3 or index == 5):
+        if (state[1] == high[1] - 1) and (brms > thresh6):
+            pixels[state[0] - 1] = dr
+            pixels[state[1] + 1] = dr
+            pixels[state[2] - 1] = dr
+        elif state[1] == high[1] - 2 and (brms > thresh5):
+            pixels[state[0] - 1] = dy
+            pixels[state[1] + 1] = dy
+            pixels[state[2] - 1] = dy
+        elif state[1] == high[1] - 3 and (brms > thresh4):
+            pixels[state[0] - 1] = dg
+            pixels[state[1] + 1] = dg
+            pixels[state[2] - 1] = dg
+        elif state[1] == high[1] - 4 and (brms > thresh3):
+            pixels[state[0] - 1] = dg
+            pixels[state[1] + 1] = dg
+            pixels[state[2] - 1] = dg
+        elif state[1] == high[1] - 5 and (brms > thresh2):
+            pixels[state[0] - 1] = dg
+            pixels[state[1] + 1] = dg
+            pixels[state[2] - 1] = dg
+        elif state[1] == high[1] - 6 and (brms > thresh1):
+            pixels[state[0] - 1] = dg
+            pixels[state[1] + 1] = dg
+            pixels[state[2] - 1] = dg
+            # Remove Centre Pixel Above
+        pixels[state[1] - 1] = off
+        # Write new pixel config to panel
+        pixels.show()
+        # Track the current row position state
+        state = [state[0] - 1, state[1] + 1, state[2] - 1]
 
-    # Calculate all the DFT bins we have to compute to include frequencies
-    # in `freqs`.
-    bins = set()
-    for f_range in freqs:
-        f_start, f_end = f_range
-        k_start = int(math.floor(f_start / f_step))
-        k_end = int(math.ceil(f_end / f_step))
+    # Remove lowest line for tooth
+    while (state[1] > low[1]) and (index == 1 or index == 3 or index == 5):
+        # Ascend Line
+        pixels[state[0] + 1] = dg
+        pixels[state[1] - 1] = dg
+        pixels[state[2] + 1] = dg
+        # Remove Line Below
+        pixels[state[0]] = off
+        pixels[state[1]] = off
+        pixels[state[2]] = off
+        # Write new pixel config to panel
+        pixels.show()
+        # Track the current row position state
+        state = [state[0] + 1, state[1] - 1, state[2] + 1]
 
-        if k_end > window_size - 1: raise ValueError('frequency out of range %s' % k_end)
-        bins = bins.union(range(k_start, k_end))
 
-    # For all the bins, calculate the DFT term
-    n_range = range(0, window_size)
-    freqs = []
-    results = []
-    for k in bins:
+## End of bounce function ##
+########################################################################################################################
 
-        # Bin frequency and coefficients for the computation
-        f = k * f_step_normalized
-        w_real = 2.0 * math.cos(2.0 * math.pi * f)
-        w_imag = math.sin(2.0 * math.pi * f)
-
-        # Doing the calculation on the whole sample
-        d1, d2 = 0.0, 0.0
-        for n in n_range:
-            y  = samples[n] + w_real * d1 - d2
-            d2, d1 = d1, y
-
-        # Storing results `(real part, imag part, power)`
-        results.append((
-            0.5 * w_real * d1 - d2, w_imag * d1,
-            d2**2 + d1**2 - w_real * d1 * d2)
-        )
-        freqs.append(int(round(f * sample_rate)))
-    return freqs, results
-
-# Blank pixels at startup
-for x in range(0, num_pixels):
-  pixels[x] = off
-pixels.show()
-
-# Draw teeth
-for tooth in teeth:
-  for x in tooth:
-    pixels[x] = dim
-pixels.show()
-
-# Initialise PyAudio
-maxValue = 2**16
-p = pyaudio.PyAudio()
-
-# Open the PyAudio and immediately stop it to prevent a buffer overrun
-# Need to sleep for a second after init to let it settle 
-stream = p.open(format=pyaudio.paInt16, channels=chans, rate=freq, input=True, frames_per_buffer=chunk)
-stream.stop_stream()
-time.sleep(1)
-
-# Dance, Baby!
-try:
-
-  while True:
-
-    # Get current amplitude
+########################################################################################################################
+## Start of getRms function ##
+def getRms():
     stream.start_stream()
     data = stream.read(chunk)
     stream.stop_stream()
     rms = audioop.rms(data, 2)
     print("Amplitude: " + str(rms))
-    
-    # Static trigger amplitude for now 
-    if rms > 10000:
-      while index == last:
-        index  = random.randint(0, 5)
-      last = index
+    return rms
 
-      # Get thresholds for selected tooth 
-      state = tlow[index]
-      low = tlow[index]
-      high = thigh[index]
-   
-      # Add line for tooth 
-      while state[0] < high[0]:
-        if state[0] == high[0]-1 or state[0] == high[0]-2:
-          pixels[state[0]+1] = red
-          pixels[state[1]-1] = red
-          pixels[state[2]+1] = red 
-        elif state[0] == high[0]-3:
-          pixels[state[0]+1] = orange
-          pixels[state[1]-1] = orange
-          pixels[state[2]+1] = orange
-        elif state[0] == high[0]-4:
-          pixels[state[0]+1] = yellow
-          pixels[state[1]-1] = yellow
-          pixels[state[2]+1] = yellow
+
+## End of getRms function ##
+########################################################################################################################
+
+########################################################################################################################
+## Start of blankPixels function ##
+def blankPixels():
+    for x in range(0, num_pixels):
+        pixels[x] = off
+    pixels.show()
+
+
+## End of blankPixels function ##
+########################################################################################################################
+
+########################################################################################################################
+## Start of blankPixels function ##
+def resetTeeth():
+    col = lg
+    for tooth in teeth:
+        for x in tooth:
+            pixels[x] = col
+        if col == lg:
+            col = dg
         else:
-          pixels[state[0]+1] = on
-          pixels[state[1]-1] = on
-          pixels[state[2]+1] = on
-        pixels.show()
-        state = [ state[0]+1, state[1]-1, state[2]+1 ]
+            col = lg
+    pixels.show()
 
-      # Remove lowest line for tooth
-      while state[0] > low[0]:
-        pixels[state[0]] = off
-        pixels[state[1]] = off
-        pixels[state[2]] = off
-        pixels.show()
-        state = [ state[0]-1, state[1]+1, state[2]-1 ]
+
+## End of blankPixels function ##
+########################################################################################################################
+## Start prep ##
+
+# Initialise PyAudio, start/stop stream to prevent buffer overrun and sleep to settle during init
+print("Initialising audio listener, ignore Jack Server errors...")
+print("No try/except has been used, hence Python will crash if audio input cannot be detected")
+maxValue = 2 ** 16
+p = pyaudio.PyAudio()
+stream = p.open(format=pyaudio.paInt16, channels=chans, rate=freq, input=True, frames_per_buffer=chunk)
+stream.stop_stream()
+time.sleep(1)
+print("Audio init complete")
+
+if GPIO.input(lat_button_pin) == GPIO.LOW:
+    print("Latch switch disengaged - toggle to start...")
+while GPIO.input(lat_button_pin) == GPIO.LOW:
+    time.sleep(latchWait)
+print("Latch switch engaged, let's go!")
+blankPixels()
+resetTeeth()
+
+
+## End prep ##
+########################################################################################################################
+
+########################################################################################################################
+# Main loop ##
+
+try:
+    momButtonDown = 0
+    displayOff = 0
+    while True:
+        if GPIO.input(mom_button_pin) == GPIO.HIGH and GPIO.input(lat_button_pin) == GPIO.HIGH:
+            momButtonDown = 1
+            rms = getRms()
+            if rms > thresh1:
+                while index == last:
+                    index = random.randint(0, 5)
+                last = index
+                bounce(index, rms)
+        elif GPIO.input(mom_button_pin) == GPIO.LOW and GPIO.input(lat_button_pin) == GPIO.HIGH and momButtonDown == 1:
+            print("Momentary switch released - resetting display to resting teeth")
+            print("Push momentary switch to continue...")
+            blankPixels()
+            resetTeeth()
+            momButtonDown = 0  # This stops constant re-drawing of the teeth whilst the momentary switch is LOW
+            time.sleep(idleWait)
+        elif GPIO.input(lat_button_pin) == GPIO.LOW:
+            print("Latch switch disengaged - blanking display")
+            blankPixels()
+            displayOff = 1
+            while GPIO.input(lat_button_pin) == GPIO.LOW:
+                time.sleep(latchWait)
+        elif GPIO.input(lat_button_pin) == GPIO.HIGH and displayOff == 1:
+            print("Latch switch engaged - reactivating display")
+            displayOff = 0
+            resetTeeth()
+
 
 # Blank pixels when we CTRL-C out of the program and close/terminate the PyAudio stream
 except KeyboardInterrupt:
-  for x in range(0, num_pixels):
-    pixels[x] = off
-  pixels.show()
-  stream.close()
-  p.terminate()
+    for x in range(0, num_pixels):
+        pixels[x] = off
+    pixels.show()
+    stream.close()
+    p.terminate()
+
+
+## End main loop ##
+########################################################################################################################
