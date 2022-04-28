@@ -78,6 +78,7 @@ chunk = 1024
 freq = 48000
 chans = 1
 
+# RMS thresholds to dictate bounce height
 thresh1 = 9000
 thresh2 = 10000
 thresh3 = 12000
@@ -85,7 +86,7 @@ thresh4 = 15000
 thresh5 = 19000
 thresh6 = 24000
 
-# Multithread tooth sequences combinations
+# Multithread tooth sequences combinations - currently unused
 seq1 = "012345"
 seq2 = "123450"
 seq3 = "234501"
