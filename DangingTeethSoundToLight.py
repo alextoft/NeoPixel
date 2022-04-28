@@ -101,6 +101,8 @@ seq = [seq1, seq2, seq3, seq4, seq5, seq6]
 ########################################################################################################################
 
 ########################################################################################################################
+## Start of bounce function ##
+
 def bounce(index, brms):
     print("Bouncing tooth: " + str(index + 1))
     # Get thresholds
@@ -212,6 +214,7 @@ def bounce(index, brms):
 
 ########################################################################################################################
 ## Start of getRms function ##
+
 def getRms():
     stream.start_stream()
     data = stream.read(chunk)
@@ -226,6 +229,7 @@ def getRms():
 
 ########################################################################################################################
 ## Start of blankPixels function ##
+
 def blankPixels():
     for x in range(0, num_pixels):
         pixels[x] = off
@@ -237,6 +241,7 @@ def blankPixels():
 
 ########################################################################################################################
 ## Start of blankPixels function ##
+
 def resetTeeth():
     col = lg
     for tooth in teeth:
