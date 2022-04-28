@@ -18,11 +18,11 @@ brightness = 0.2
 # Button config
 mom_button_pin = 22  # Momentary switch GPIO pin designation - physical pin is 15 with physical pin 17 as 3.3v source
 lat_button_pin = 4  # Latching switch GPIO designation - physical pin is 7 with physical pin 1 as 3.3v source
-# Initialise the pins for the 2 available buttons
-GPIO.setup(mom_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
-GPIO.setup(lat_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
+
+# Sleep values for buttons during inactivity
 idleWait = 0.01  # 10ms to save on CPU cycles whilst PTT is disengaged
 latchWait = 0.1  # 100ms to save on CPU cycles whilst looping waiting for display activation
+
 # LED panel config/init for GPIO. Using SPI actually makes it slower!!
 pixels = neopixel.NeoPixel(pixel_pin, num_pixels, brightness=brightness, auto_write=False, pixel_order=order)
 
@@ -253,6 +253,10 @@ def resetTeeth():
 ## End of blankPixels function ##
 ########################################################################################################################
 ## Start prep ##
+
+# Initialise buttons
+GPIO.setup(mom_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
+GPIO.setup(lat_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
 
 # Initialise PyAudio, start/stop stream to prevent buffer overrun and sleep to settle during init
 print("Initialising audio listener, ignore Jack Server errors...")
