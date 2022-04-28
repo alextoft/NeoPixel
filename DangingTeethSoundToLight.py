@@ -58,7 +58,7 @@ blow5 = [97, 110, 113]
 blow6 = [126, 129, 142]
 blow = [blow1, blow2, blow3, blow4, blow5, blow6]
 
-# Use tlow to bounce to normal teeth, or blow to allow teeth to equaise to 2px deep
+# Use tlow to bounce to normal teeth, or blow to allow teeth to equalise to 2px deep
 lowtouse = blow
 
 # Define RGB colours we are going to use
