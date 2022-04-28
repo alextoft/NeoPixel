@@ -11,9 +11,9 @@ import RPi.GPIO as GPIO
 
 # GPIO control settings
 pixel_pin = board.D18  # GPIO pin - physical pin 12
-num_pixels = 256
-order = neopixel.GRB
-brightness = 0.2
+num_pixels = 256 # Number of pixels in panel. 8x32 is the default, although wiring is serial so can be trimmed.
+order = neopixel.GRB # Why GRB? Who knows.
+brightness = 0.2 # This is MORE than enough for dev. Go full throttle and you'll fill the room.
 
 # Button config
 mom_button_pin = 22  # Momentary switch GPIO pin designation - physical pin is 15 with physical pin 17 as 3.3v source
@@ -108,7 +108,7 @@ def bounce(index, brms):
     high = thigh[index]
     state = low
 
-    # Processing for D-U-D columns
+    # Processing for D-U-D columns (down-up-down LED addressing path)
     # Add line for tooth
     while (state[0] < high[0]) and (index == 0 or index == 2 or index == 4):
         if (state[0] == high[0] - 1) and (brms > thresh6):
@@ -157,7 +157,7 @@ def bounce(index, brms):
 
     ##########################################################################################
 
-    # Processing for U-D-U columns
+    # Processing for U-D-U columns (up-down-up LED addressing path)
     # Add line for tooth
     while (state[1] < high[1]) and (index == 1 or index == 3 or index == 5):
         if (state[1] == high[1] - 1) and (brms > thresh6):
