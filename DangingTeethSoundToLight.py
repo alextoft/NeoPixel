@@ -22,7 +22,7 @@ lat_button_pin = 4  # Latching switch GPIO designation - physical pin is 7 with 
 GPIO.setup(mom_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
 GPIO.setup(lat_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
 idleWait = 0.01  # 10ms to save on CPU cycles whilst PTT is disengaged
-latchWait = 0.1  # 50ms to save on CPU cycles whilst looping waiting for display activation
+latchWait = 0.1  # 100ms to save on CPU cycles whilst looping waiting for display activation
 # LED panel config/init for GPIO. Using SPI actually makes it slower!!
 pixels = neopixel.NeoPixel(pixel_pin, num_pixels, brightness=brightness, auto_write=False, pixel_order=order)
 
