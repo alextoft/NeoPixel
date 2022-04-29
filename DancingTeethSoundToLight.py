@@ -330,7 +330,7 @@ except KeyboardInterrupt:
     pixels.show()
     stream.close()
     p.terminate()
-    print("Argh! Killed by death!")
+    print("\nArgh! Killed by death!")
 
 
 ## End main loop ##
