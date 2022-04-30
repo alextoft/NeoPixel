@@ -307,9 +307,9 @@ try:
     displayOff = 0
     while True:
         if (GPIO.input(mom_button_pin) == GPIO.HIGH and GPIO.input(lat_button_pin) == GPIO.HIGH) or (
-                s2lbut == 1 and s2l == 0):
+                s2lbut == 0 and s2l == 1):
             if momButtonDown == 0:
-                logging.info("Momentary switch held (or disabled) - bouncing teeth")
+                logging.info("Momentary switch held (or disabled in config) - bouncing teeth")
             momButtonDown = 1
             rms = getRms()
             if rms > thresh1:
@@ -318,7 +318,7 @@ try:
                 last = index
                 bounce(index, rms)
         elif (GPIO.input(mom_button_pin) == GPIO.LOW and GPIO.input(
-                lat_button_pin) == GPIO.HIGH and momButtonDown == 1) or (s2lbut == 1 and s2l == 1):
+                lat_button_pin) == GPIO.HIGH and momButtonDown == 1):
             logging.info("Momentary switch released - resetting display to resting teeth")
             logging.info("Hold momentary switch to bounce or toggle latch switch to blank display")
             blankPixels()
