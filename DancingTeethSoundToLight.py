@@ -5,23 +5,27 @@ import random
 import pyaudio
 import audioop
 import RPi.GPIO as GPIO
+import logging
 
 ########################################################################################################################
 ## START CONFIG SECTION ##
 
 # GPIO control settings
 pixel_pin = board.D18  # GPIO pin - physical pin 12
-num_pixels = 256 # Number of pixels in panel. 8x32 is the default, although wiring is serial so can be trimmed.
-order = neopixel.GRB # Why GRB? Who knows.
-brightness = 0.2 # This is MORE than enough for dev. Go full throttle and you'll fill the room.
+num_pixels = 256
+order = neopixel.GRB
+brightness = 0.2
 
 # Button config
 mom_button_pin = 22  # Momentary switch GPIO pin designation - physical pin is 15 with physical pin 17 as 3.3v source
 lat_button_pin = 4  # Latching switch GPIO designation - physical pin is 7 with physical pin 1 as 3.3v source
-
-# Sleep values for buttons during inactivity
+# Initialise the pins for the 2 available buttons
+GPIO.setup(mom_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
+GPIO.setup(lat_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
 idleWait = 0.01  # 10ms to save on CPU cycles whilst PTT is disengaged
-latchWait = 0.1  # 100ms to save on CPU cycles whilst looping waiting for display activation
+latchWait = 0.1  # 50ms to save on CPU cycles whilst looping waiting for display activation
+# LED panel config/init for GPIO. Using SPI actually makes it slower!!
+pixels = neopixel.NeoPixel(pixel_pin, num_pixels, brightness=brightness, auto_write=False, pixel_order=order)
 
 # Define Teeth Resting State
 tooth1 = [0, 1, 14, 17, 16]
@@ -49,7 +53,6 @@ thigh5 = [103, 114, 119]
 thigh6 = [120, 135, 136]
 thigh = [thigh1, thigh2, thigh3, thigh4, thigh5, thigh6]
 
-# If lowtouse it set to blow, each tooth will settle to a depth of 2px
 blow1 = [1, 14, 17]
 blow2 = [30, 33, 46]
 blow3 = [49, 62, 65]
@@ -70,7 +73,7 @@ dy = [204, 204, 20]
 lr = [255, 0, 0]
 dr = [255, 0, 20]
 
-# Misc vars to prevent repeated teeth bouncess during randomisation
+# Misc vars to prevent repeated teeth bouncesq during randomisation
 last = 0
 index = 0
 
@@ -79,15 +82,15 @@ chunk = 1024
 freq = 48000
 chans = 1
 
-# RMS thresholds to dictate bounce height
 thresh1 = 9000
 thresh2 = 10000
 thresh3 = 12000
 thresh4 = 15000
 thresh5 = 19000
 thresh6 = 24000
+thresh = [thresh1, thresh2, thresh3, thresh4, thresh5, thresh6]
 
-# Multithread tooth sequences combinations - currently unused
+# Multithread tooth sequences combinations
 seq1 = "012345"
 seq2 = "123450"
 seq3 = "234501"
@@ -96,21 +99,28 @@ seq5 = "450123"
 seq6 = "501234"
 seq = [seq1, seq2, seq3, seq4, seq5, seq6]
 
+# Version
+lbversion = str("0.1")
+
+# Sound to light setting
+s2l = 0
+
+# Require momentary button for S2L
+s2lbut = 0
+
 
 ## END CONFIG SECTION ##
 ########################################################################################################################
 
 ########################################################################################################################
-## Start of bounce function ##
-
 def bounce(index, brms):
-    print("Bouncing tooth: " + str(index + 1))
+    # logging.info("Bouncing tooth: " + str(index + 1))
     # Get thresholds
     low = lowtouse[index]
     high = thigh[index]
     state = low
 
-    # Processing for D-U-D columns (down-up-down LED addressing path)
+    # Processing for D-U-D columns
     # Add line for tooth
     while (state[0] < high[0]) and (index == 0 or index == 2 or index == 4):
         if (state[0] == high[0] - 1) and (brms > thresh6):
@@ -159,7 +169,7 @@ def bounce(index, brms):
 
     ##########################################################################################
 
-    # Processing for U-D-U columns (up-down-up LED addressing path)
+    # Processing for U-D-U columns
     # Add line for tooth
     while (state[1] < high[1]) and (index == 1 or index == 3 or index == 5):
         if (state[1] == high[1] - 1) and (brms > thresh6):
@@ -214,14 +224,16 @@ def bounce(index, brms):
 
 ########################################################################################################################
 ## Start of getRms function ##
-
 def getRms():
-    stream.start_stream()
-    data = stream.read(chunk)
-    stream.stop_stream()
-    rms = audioop.rms(data, 2)
-    print("Amplitude: " + str(rms))
-    return rms
+    if s2l == 1:
+        stream.start_stream()
+        data = stream.read(chunk)
+        stream.stop_stream()
+        rms = audioop.rms(data, 2)
+        logging.debug("Amplitude: " + str(rms))
+        return rms
+    else:
+        return int(random.choice(thresh) + 1)
 
 
 ## End of getRms function ##
@@ -229,7 +241,6 @@ def getRms():
 
 ########################################################################################################################
 ## Start of blankPixels function ##
-
 def blankPixels():
     for x in range(0, num_pixels):
         pixels[x] = off
@@ -241,7 +252,6 @@ def blankPixels():
 
 ########################################################################################################################
 ## Start of blankPixels function ##
-
 def resetTeeth():
     col = lg
     for tooth in teeth:
@@ -256,35 +266,35 @@ def resetTeeth():
 
 ## End of blankPixels function ##
 ########################################################################################################################
-
-########################################################################################################################
 ## Start prep ##
 
-# LED panel init for GPIO. Using SPI actually makes it slower!!
-pixels = neopixel.NeoPixel(pixel_pin, num_pixels, brightness=brightness, auto_write=False, pixel_order=order)
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.DEBUG,
+    datefmt='%Y-%m-%d %H:%M:%S')
 
-# Initialise buttons
-GPIO.setup(mom_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
-GPIO.setup(lat_button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Set initial value to LOW (off)
+logging.info("LoopBot v" + lbversion + " starting up")
 
-# Initialise PyAudio, start/stop stream to prevent buffer overrun and sleep to settle during init
-print("Initialising audio listener, ignore Jack Server errors...")
-print("No try/except has been used, hence Python will crash if audio input cannot be detected")
-maxValue = 2 ** 16
-p = pyaudio.PyAudio()
-stream = p.open(format=pyaudio.paInt16, channels=chans, rate=freq, input=True, frames_per_buffer=chunk)
-stream.stop_stream()
-time.sleep(1)
-print("Audio init complete")
+if s2l == 1:
+    # Initialise PyAudio, start/stop stream to prevent buffer overrun and sleep to settle during init
+    logging.info("Initialising audio listener, ignore Jack Server errors...")
+    logging.info("No try/except has been used, hence Python will crash if audio input cannot be detected")
+    maxValue = 2 ** 16
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paInt16, channels=chans, rate=freq, input=True, frames_per_buffer=chunk)
+    stream.stop_stream()
+    time.sleep(1)
+    logging.info("Audio init complete")
+else:
+    logging.info("Sound trigger disabled in config")
 
 if GPIO.input(lat_button_pin) == GPIO.LOW:
-    print("Latch switch disengaged - toggle to start...")
+    logging.info("Latch switch disengaged - toggle to start")
 while GPIO.input(lat_button_pin) == GPIO.LOW:
     time.sleep(latchWait)
-print("Latch switch engaged, let's go!")
+logging.info("Latch switch engaged - drawing resting teeth - hold momentary switch to bounce")
 blankPixels()
 resetTeeth()
-
 
 ## End prep ##
 ########################################################################################################################
@@ -296,7 +306,10 @@ try:
     momButtonDown = 0
     displayOff = 0
     while True:
-        if GPIO.input(mom_button_pin) == GPIO.HIGH and GPIO.input(lat_button_pin) == GPIO.HIGH:
+        if (GPIO.input(mom_button_pin) == GPIO.HIGH and GPIO.input(lat_button_pin) == GPIO.HIGH) or (
+                s2lbut == 1 and s2l == 0):
+            if momButtonDown == 0:
+                logging.info("Momentary switch held (or disabled) - bouncing teeth")
             momButtonDown = 1
             rms = getRms()
             if rms > thresh1:
@@ -304,21 +317,22 @@ try:
                     index = random.randint(0, 5)
                 last = index
                 bounce(index, rms)
-        elif GPIO.input(mom_button_pin) == GPIO.LOW and GPIO.input(lat_button_pin) == GPIO.HIGH and momButtonDown == 1:
-            print("Momentary switch released - resetting display to resting teeth")
-            print("Push momentary switch to continue...")
+        elif (GPIO.input(mom_button_pin) == GPIO.LOW and GPIO.input(
+                lat_button_pin) == GPIO.HIGH and momButtonDown == 1) or (s2lbut == 1 and s2l == 1):
+            logging.info("Momentary switch released - resetting display to resting teeth")
+            logging.info("Hold momentary switch to bounce or toggle latch switch to blank display")
             blankPixels()
             resetTeeth()
             momButtonDown = 0  # This stops constant re-drawing of the teeth whilst the momentary switch is LOW
             time.sleep(idleWait)
         elif GPIO.input(lat_button_pin) == GPIO.LOW:
-            print("Latch switch disengaged - blanking display")
+            logging.info("Latch switch disengaged - blanking display")
             blankPixels()
             displayOff = 1
             while GPIO.input(lat_button_pin) == GPIO.LOW:
                 time.sleep(latchWait)
         elif GPIO.input(lat_button_pin) == GPIO.HIGH and displayOff == 1:
-            print("Latch switch engaged - reactivating display")
+            logging.info("Latch switch engaged - activating display")
             displayOff = 0
             resetTeeth()
 
@@ -328,10 +342,12 @@ except KeyboardInterrupt:
     for x in range(0, num_pixels):
         pixels[x] = off
     pixels.show()
-    stream.close()
-    p.terminate()
-    print("\nArgh! Killed by death!")
-
+    print("\n")
+    if s2l == 1:
+        stream.close()
+        p.terminate()
+        logging.info("Shutting down audio stream")
+    logging.critical("Process forcibly terminated - killed by death!")
 
 ## End main loop ##
 ########################################################################################################################
