@@ -12,9 +12,9 @@ import logging
 
 # GPIO control settings
 pixel_pin = board.D18  # GPIO pin - physical pin 12
-num_pixels = 256
+num_pixels = 144
 order = neopixel.GRB
-brightness = 0.2
+brightness = 1
 
 # Button config
 mom_button_pin = 22  # Momentary switch GPIO pin designation - physical pin is 15 with physical pin 17 as 3.3v source
@@ -78,7 +78,7 @@ last = 0
 index = 0
 
 # Audio config settings - based on Alesis Core 1 input specs
-chunk = 1024
+chunk = 2048
 freq = 48000
 chans = 1
 
@@ -90,17 +90,8 @@ thresh5 = 19000
 thresh6 = 24000
 thresh = [thresh1, thresh2, thresh3, thresh4, thresh5, thresh6]
 
-# Multithread tooth sequences combinations
-seq1 = "012345"
-seq2 = "123450"
-seq3 = "234501"
-seq4 = "345012"
-seq5 = "450123"
-seq6 = "501234"
-seq = [seq1, seq2, seq3, seq4, seq5, seq6]
-
 # Version
-lbversion = str("0.1")
+lbversion = 0.1
 
 # Sound to light setting
 s2l = 0
@@ -108,11 +99,50 @@ s2l = 0
 # Require momentary button for S2L
 s2lbut = 0
 
+# Logging
+logFileName = "/var/log/loopbot.log"
+
+# OutSplash
+byePixels = [9, 10, 11, 12, 13, 14, 15, 16, 19, 22, 25, 28, 31, 33, 34, 36, 37, 48, 62, 66, 67, 68, 69, 70, 78, 80, 96,
+             97, 98, 99, 100, 101, 102, 105, 108, 111, 112, 115, 118, 121, 127]
+byeTime = 2
+
 
 ## END CONFIG SECTION ##
 ########################################################################################################################
 
 ########################################################################################################################
+def wheel(pos):
+    # Input a value 0 to 255 to get a color value.
+    # The colours are a transition r - g - b - back to r.
+    if pos < 0 or pos > 255:
+        r = g = b = 0
+    elif pos < 85:
+        r = int(pos * 3)
+        g = int(255 - pos * 3)
+        b = 0
+    elif pos < 170:
+        pos -= 85
+        r = int(255 - pos * 3)
+        g = 0
+        b = int(pos * 3)
+    else:
+        pos -= 170
+        r = 0
+        g = int(pos * 3)
+        b = int(255 - pos * 3)
+    return (r, g, b) if order in (neopixel.RGB, neopixel.GRB) else (r, g, b, 0)
+
+
+def rainbow_cycle(wait):
+    for j in range(255):
+        for i in range(num_pixels):
+            pixel_index = (i * 256 // num_pixels) + j
+            pixels[i] = wheel(pixel_index & 255)
+        pixels.show()
+        time.sleep(wait)
+
+
 def bounce(index, brms):
     # logging.info("Bouncing tooth: " + str(index + 1))
     # Get thresholds
@@ -266,14 +296,32 @@ def resetTeeth():
 
 ## End of blankPixels function ##
 ########################################################################################################################
+
+########################################################################################################################
+## Start of sayGoodbye function ##
+def sayGoodbye():
+    for x in byePixels:
+        pixels[x] = dr
+    pixels.show()
+
+
+## End of sayGoodbye function ##
+########################################################################################################################
+
+
 ## Start prep ##
 
 logging.basicConfig(
+    filename=logFileName,
+    filemode='a',
     format='%(asctime)s %(levelname)-8s %(message)s',
     level=logging.DEBUG,
     datefmt='%Y-%m-%d %H:%M:%S')
 
-logging.info("LoopBot v" + lbversion + " starting up")
+logging.info("LoopBot v" + str(lbversion) + " starting up")
+logging.info("Rainbow splash")
+rainbow_cycle(0)
+blankPixels()
 
 if s2l == 1:
     # Initialise PyAudio, start/stop stream to prevent buffer overrun and sleep to settle during init
@@ -339,10 +387,13 @@ try:
 
 # Blank pixels when we CTRL-C out of the program and close/terminate the PyAudio stream
 except KeyboardInterrupt:
-    for x in range(0, num_pixels):
-        pixels[x] = off
-    pixels.show()
-    print("\n")
+    # for x in range(0, num_pixels):
+    #    pixels[x] = off
+    # pixels.show()
+    blankPixels()
+    sayGoodbye()
+    time.sleep(byeTime)
+    blankPixels()
     if s2l == 1:
         stream.close()
         p.terminate()
