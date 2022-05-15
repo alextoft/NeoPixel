@@ -37,9 +37,10 @@ try:
                             doOutput("Short Push - LED panel Rainbow OFF")
                             go = 0
                         elif event.code == 114 and data.keystate == 0:
-                            doOutput("Long push - Ringing tea bell :)")
+                            doOutput("Long push - Rebooting!")
+                            os.system('/usr/sbin/reboot') 
             except:
-                doOutput("Button has disappeared likely due to inactivity (10min timeout). Resetting Program.")
+                doOutput("Bluetooth is having an issue. Glitch or timeout? Who knows. Restarting program.")
                 sys.stdout.flush()
                 os.execv(sys.executable, ['python'] + [sys.argv[0]])
 
@@ -97,7 +98,7 @@ try:
                     buttonPresent = 1 
                     pixels[0] = [ 0, 255, 0 ]
                     pixels.show()
-                    time.sleep(0.2)
+                    time.sleep(0.1)
                     blueLed = 1
         except:
             if butMsg == 0:
@@ -112,7 +113,7 @@ try:
                 pixels[0] = [0, 0, 0]
                 pixels.show()
                 blueLed = 0
-            time.sleep(0.3)
+            time.sleep(0.2)
 
     blankDisplay()
     buttonMonitor = threading.Thread(target=trackButton)
