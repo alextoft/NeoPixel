@@ -9,7 +9,8 @@ from datetime import datetime
 
 pixel_pin = board.D18
 num_pixels = 144
-button1mac = "b8:27:eb:60:5c:77"
+# This is the host machine MAC - it will need customising
+btMac = "b8:27:eb:60:5c:77"
 
 global go
 
@@ -36,7 +37,7 @@ try:
                             doOutput("Short Push - LED panel Rainbow OFF")
                             go = 0
                         elif event.code == 114 and data.keystate == 0:
-                            doOutput("Long push - Not yet implemented")
+                            doOutput("Long push - Ringing tea bell :)")
             except:
                 doOutput("Button has disappeared likely due to inactivity (10min timeout). Resetting Program.")
                 sys.stdout.flush()
@@ -76,8 +77,7 @@ try:
         print(now.strftime("%Y-%m-%d %H:%M:%S") + " " + msg)
 
     def blankDisplay():
-        for x in pixels:
-            pixels.fill((0,0,0))
+        pixels.fill((0,0,0))
         pixels.show()
 
 #######
@@ -90,13 +90,14 @@ try:
     while buttonPresent == 0:
         try:
             while buttonPresent == 0:
+                # This is a disgrace. Device needs enumerating properly.
                 device = evdev.InputDevice('/dev/input/event2')
-                if str(device.phys) == button1mac:
+                if str(device.phys) == btMac:
                     doOutput("BLE button detected. Let's go!")
                     buttonPresent = 1 
                     pixels[0] = [ 0, 255, 0 ]
                     pixels.show()
-                    time.sleep(0.5)
+                    time.sleep(0.2)
                     blueLed = 1
         except:
             if butMsg == 0:
@@ -111,7 +112,7 @@ try:
                 pixels[0] = [0, 0, 0]
                 pixels.show()
                 blueLed = 0
-            time.sleep(0.5)
+            time.sleep(0.3)
 
     blankDisplay()
     buttonMonitor = threading.Thread(target=trackButton)
