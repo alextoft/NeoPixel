@@ -9,8 +9,8 @@ from datetime import datetime
 
 pixel_pin = board.D18
 num_pixels = 144
-button1col = "Blue"
 button1mac = "b8:27:eb:60:5c:77"
+
 global go
 
 try:
@@ -67,8 +67,7 @@ try:
                 pixel_index = (i * 256 // num_pixels) + j
                 pixels[i] = panel(pixel_index & 255)
                 if go == 0:
-                    pixels.fill((0,0,0))
-                    pixels.show()
+                    blankDisplay()
                     break
             pixels.show()
 
@@ -84,22 +83,37 @@ try:
 #######
 
     doOutput("Modified rainbow LED demo with BLE button control v0.0001")
-
+    blankDisplay()
     buttonPresent = 0
     butMsg = 0
+    blueLed = 0
     while buttonPresent == 0:
         try:
             while buttonPresent == 0:
-                device = evdev.InputDevice('/dev/input/event1')
+                device = evdev.InputDevice('/dev/input/event2')
                 if str(device.phys) == button1mac:
-                    doOutput(button1col + " BLE button " + button1mac + " detected. Let's go!")
+                    doOutput("BLE button detected. Let's go!")
                     buttonPresent = 1 
+                    pixels[0] = [ 0, 255, 0 ]
+                    pixels.show()
+                    time.sleep(0.5)
+                    blueLed = 1
         except:
             if butMsg == 0:
                 doOutput("Waiting for button device to appear (click it!)") 
                 butMsg = 1
-            time.sleep(0.01)
+            # Blink top left pixel while waiting for BLE device to appear
+            if blueLed == 0:
+                pixels[0] = [0, 0, 255]
+                pixels.show()
+                blueLed = 1
+            elif blueLed == 1:
+                pixels[0] = [0, 0, 0]
+                pixels.show()
+                blueLed = 0
+            time.sleep(0.5)
 
+    blankDisplay()
     buttonMonitor = threading.Thread(target=trackButton)
     buttonMonitor.start()
     go = 0 
@@ -111,3 +125,4 @@ try:
 except KeyboardInterrupt:
     blankDisplay()
     doOutput("Killed by death!")
+    quit()
