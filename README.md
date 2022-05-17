@@ -5,4 +5,4 @@ I'm not a big Python guy, but some samples here as I figure things out. If you f
 
 If you think the code is shit, it probably is :)
 
-![](name-of-giphy.gif)
+![]RingGif.gif)
