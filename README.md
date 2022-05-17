@@ -7,4 +7,6 @@ I'm not a big Python guy, but some samples here as I figure things out. If you f
 
 If you think the code is shit, it probably is :)
 
+Basic emulation of the Boss RC-505 looper display...
+
 ![RingGif](https://user-images.githubusercontent.com/35802824/168847091-7777e433-cb3e-49f4-b93e-f2fa9aac4ba0.gif)
