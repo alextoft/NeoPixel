@@ -43,7 +43,7 @@ def blankDisplay():
     pixels.show()
 
 
-def showFullBands(level):
+def showFullBands(level, bright):
     pixels.fill((0, 0, 0))
     # Take the list array and split into individual lists pertaining to each EQ band
     for eq in bands:
@@ -56,10 +56,17 @@ def showFullBands(level):
                     pixels[pix] = red
                 elif 6 < count < 9:
                     pixels[pix] = yellow
-                elif 0 < count < 7:
+                elif 4 < count < 7:
                     pixels[pix] = green
+                elif 2 < count < 5:
+                    pixels[pix] = dgreen
+                elif 0 < count < 3:
+                    pixels[pix] = lgreen
                 elif count == 0:
-                    pixels[pix] = purple
+                    if bright == 1:
+                      pixels[pix] = purple
+                    elif bright == 0:
+                      pixels[pix] = fpurple
                 count += 1
     pixels.show()
 
@@ -99,7 +106,7 @@ num_cols = 44
 num_rows = 11
 
 # Have you seen it on full brightness? Have you seen it?!
-ledBrightness = 0.7
+ledBrightness = 0.1
 # Send commands in batches
 autoWrite = False
 # Set pixel colour ordering
@@ -112,8 +119,11 @@ pixels = neopixel.NeoPixel(
 # LED Colours
 red = (255, 0, 0)
 yellow = (255, 255, 0)
+dgreen = (50, 205, 50)
 green = (0, 255, 0)
+lgreen = (173, 255, 47)
 purple = (128, 0, 128)
+fpurple = (64, 4, 62)
 off = (0, 0, 0)
 
 # Build row/column lists
@@ -123,14 +133,14 @@ bands = getBands(cols)
 
 # Give a visual indication flash that we're up and running
 print("Panel splash...")
-showFullBands(12)
-time.sleep(1)
+showFullBands(12,1)
+time.sleep(3)
 blankDisplay()
 
 # Configure audio listener
 # Audio source is an Alesis Core 1 wth OTG connection to Raspberry Pi Zero 2 W
 # 3072Hz seems like a good sample size for smooth transitions and to reduce jitter
-audioSlice = 2048
+audioSlice = 4006
 # The Alesis Core 1 has a 48kHz input
 audioRate = 48000
 # Working in mono here
@@ -165,28 +175,28 @@ while True:
         crms = queue.pop(0)
         # print(crms)
         if crms > 27000:
-            showFullBands(12)
+            showFullBands(12,1)
         elif crms > 25000:
-            showFullBands(11)
+            showFullBands(11,1)
         elif crms > 23000:
-            showFullBands(10)
+            showFullBands(10,1)
         elif crms > 21000:
-            showFullBands(9)
+            showFullBands(9,1)
         elif crms > 20000:
-            showFullBands(8)
+            showFullBands(8,1)
         elif crms > 19000:
-            showFullBands(7)
+            showFullBands(7,1)
         elif crms > 18000:
-            showFullBands(6)
+            showFullBands(6,1)
         elif crms > 17000:
-            showFullBands(5)
+            showFullBands(5,1)
         elif crms > 16000:
-            showFullBands(4)
+            showFullBands(4,1)
         elif crms > 15000:
-            showFullBands(3)
+            showFullBands(3,1)
         elif crms > 14000:
-            showFullBands(2)
+            showFullBands(2,1)
         elif crms > 5000:
-            showFullBands(1)
+            showFullBands(1,1)
         else:
-            showFullBands(0)
+            showFullBands(1,0)
