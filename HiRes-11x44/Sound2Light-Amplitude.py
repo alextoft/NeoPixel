@@ -73,6 +73,7 @@ def setRms():
     while True:
         stream.start_stream()
         data = stream.read(audioSlice)
+        # Make sure to stop the stream whilst we analyse it to avoid a buffer overrun
         stream.stop_stream()
         rms = audioop.rms(data, 2)
         queue.append(rms)
