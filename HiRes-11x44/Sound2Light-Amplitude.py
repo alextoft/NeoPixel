@@ -39,7 +39,7 @@ def buildRows():
 
 
 def blankDisplay():
-    pixels.fill((0, 0, 0))
+    pixels.fill(off)
     pixels.show()
 
 
@@ -50,8 +50,15 @@ def showFullBands(level):
         # Now take the band list and split it into columns representing that band
         for bandCol in eq:
             # Then iterate over the pixels in each column which make up the band and turn them on
+            count = 0
             for pix in bandCol[0:level]:
-                pixels[pix] = (0, 255, 0)
+                if count > 8:
+                    pixels[pix] = red
+                elif count > 6 and count < 9:
+                    pixels[pix] = yellow
+                else:
+                    pixels[pix] = green
+                count += 1
     pixels.show()
 
 
@@ -71,6 +78,7 @@ def getBands(columns):
 
 
 def setRms():
+    print("Audio listener thread running...")
     while True:
         stream.start_stream()
         data = stream.read(audioSlice)
@@ -88,7 +96,7 @@ num_pixels = 484
 num_cols = 44
 num_rows = 11
 # Have you seen it on full brightness? Have you seen it?!
-ledBrightness = 0.2
+ledBrightness = 0.7
 # Send commands in batches
 autoWrite = False
 # Set pixel colour ordering
@@ -98,23 +106,32 @@ pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=ledBrightness, auto_write=autoWrite, pixel_order=pixelOrder
 )
 
+# LED Colours
+red = (255, 0, 0)
+yellow = (255, 255, 0)
+green = (0, 255, 0)
+off = (0, 0, 0)
+
 # Build row/column lists
 cols = buildCols()
 rows = buildRows()
 bands = getBands(cols)
 
 # Give a visual indication flash that we're up and running
+print("Panel splash...")
 showFullBands(12)
-time.sleep(0.5)
+time.sleep(1)
 blankDisplay()
 
 # Configure audio listener
 # Audio source is an Alesis Core 1 wth OTG connection to Raspberry Pi Zero 2 W
-# 2048Hz seems like a good sample size
-audioSlice = 2048
+# 3072Hz seems like a good sample size for smooth transitions and to reduce jitter
+audioSlice = 3072
 # The Alesis Core 1 has a 48kHz input
 audioRate = 48000
 # Working in mono here
+print(
+    "Likely to spit out a load of audio errors. These can be safely ignored if you have an audio interface connected :)")
 audioChannels = 1
 maxValue = 2 ** 16
 p = pyaudio.PyAudio()
@@ -134,7 +151,7 @@ audioMonitor.start()
 while True:
     if queue:
         crms = queue.pop(0)
-        print(crms)
+        # print(crms)
         if crms > 27000:
             showFullBands(12)
         elif crms > 25000:
@@ -157,7 +174,7 @@ while True:
             showFullBands(3)
         elif crms > 14000:
             showFullBands(2)
-        elif crms > 13000:
+        elif crms > 5000:
             showFullBands(1)
         else:
             showFullBands(0)
