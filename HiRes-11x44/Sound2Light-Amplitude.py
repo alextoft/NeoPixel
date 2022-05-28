@@ -22,6 +22,7 @@ def buildCols():
 
     return cols
 
+
 # Function not used in this instance
 def buildRows():
     rows = []
