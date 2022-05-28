@@ -35,33 +35,34 @@ def blankDisplay():
   pixels.show()
 
 def sweep(data):
-  sCol = random.choice(colours)
+  sCol = getColour()  
   for items in data:
     for x in items:
       pixels[x] = (sCol[0], sCol[1], sCol[2])
     pixels.show()
+  blankDisplay()
 
 def reverseSweep(data):
-  sCol = random.choice(colours)
+  sCol = getColour()
   for items in reversed(data):
     for x in items:
       pixels[x] = (sCol[0], sCol[1], sCol[2]) 
     pixels.show()
+  blankDisplay()
 
 def fourWaySweep():
   sweep(cols)
-  blankDisplay()
   sweep(rows)
-  blankDisplay()
   reverseSweep(cols)
-  blankDisplay()
   reverseSweep(rows)
-  blankDisplay()
 
-def getColours():
+def getColour():
   colours = [[255,0,0], [0,255,0], [0,0,255], [255,255,0], [0,255,255], [255,0,255], [192,192,192], [128,0,0], [128,128,0], [0,128,0], [128,0,128], [0,128,128], [0,0,128]]
-  return colours
+  return random.choice(colours)
 
+##################################################
+
+# Prepare board
 pixel_pin = board.D18
 num_pixels = 484
 num_cols = 44
@@ -69,14 +70,14 @@ num_rows = 11
 ledBrightness = 0.2
 autoWrite = False
 pixelOrder = neopixel.GRB
-
 pixels = neopixel.NeoPixel(
     pixel_pin, num_pixels, brightness=ledBrightness, auto_write=autoWrite, pixel_order=pixelOrder
 )
 
+# Build row/column lists
 cols = buildCols()
 rows = buildRows()
-colours = getColours()
 
+# Do stuff
 while True:
   fourWaySweep()
