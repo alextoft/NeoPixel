@@ -149,7 +149,7 @@ stream.stop_stream()
 time.sleep(1)
 print(
     "\n##################################################################################################################\n" +
-    "This should be the end of the ALSA/JackServer errors, let's crack on with making some lights flash!\n" +
+    "This should be the end of the ALSA/JackServer/PulseAudio errors, let's crack on with making some lights flash!\n" +
     "##################################################################################################################\n"
 )
 
