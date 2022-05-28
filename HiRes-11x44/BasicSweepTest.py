@@ -6,7 +6,7 @@ import random
 def buildCols():
   cols = [] 
   
-  # Define first row. Matrix numbered zig-zag style left>right, right>left, left>right etc 
+  # Define first column (left). Matrix is numbered zig-zag style left>right, right>left, left>right etc 
   col = [0, 87, 88, 175, 176, 263, 264, 351, 352, 439, 440]
   cols.append(col)
 
@@ -19,6 +19,8 @@ def buildCols():
 
 def buildRows():
   rows = []
+  
+  # Numbers in column 1 are odd/even/odd/even etc. This makes building the row arrays easy.
   for x in cols[0]:
     if(x % 2) == 0:
       row = [*range(x, x+num_cols)]
