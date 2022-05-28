@@ -97,6 +97,7 @@ pixel_pin = board.D18
 num_pixels = 484
 num_cols = 44
 num_rows = 11
+
 # Have you seen it on full brightness? Have you seen it?!
 ledBrightness = 0.7
 # Send commands in batches
@@ -134,7 +135,10 @@ audioSlice = 2048
 audioRate = 48000
 # Working in mono here
 print(
-    "Likely to spit out a load of audio errors. These can be safely ignored if you have an audio interface connected :)")
+    "\n##################################################################################################################\n" +
+    "Likely to spit out a load of audio errors. These can be safely ignored if you have an audio interface connected :)\n" +
+    "##################################################################################################################\n"
+)
 audioChannels = 1
 maxValue = 2 ** 16
 p = pyaudio.PyAudio()
@@ -143,6 +147,11 @@ stream = p.open(format=pyaudio.paInt16, channels=audioChannels, rate=audioRate, 
 stream.stop_stream()
 # Let PyAudio settle for a second as it initialises
 time.sleep(1)
+print(
+    "\n##################################################################################################################\n" +
+    "This should be the end of the ALSA/JackServer errors, let's crack on with making some lights flash!\n" +
+    "##################################################################################################################\n"
+)
 
 # Setup queue to push RMS values from listener thread, init var and fire listener thread
 queue = []
