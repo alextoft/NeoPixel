@@ -109,15 +109,18 @@ blankDisplay()
 
 # Configure audio listener
 # Audio source is an Alesis Core 1 wth OTG connection to Raspberry Pi Zero 2 W
+# 2048Hz seems like a good sample size
 audioSlice = 2048
+# The Alesis Core 1 has a 48kHz input
 audioRate = 48000
+# Working in mono here
 audioChannels = 1
 maxValue = 2 ** 16
 p = pyaudio.PyAudio()
 stream = p.open(format=pyaudio.paInt16, channels=audioChannels, rate=audioRate, input=True,
                 frames_per_buffer=audioSlice)
 stream.stop_stream()
-# Let PyAudio settle
+# Let PyAudio settle for a second as it initialises
 time.sleep(1)
 
 # Setup queue to push RMS values from listener thread, init var and fire listener thread
