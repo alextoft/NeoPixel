@@ -54,7 +54,7 @@ def showFullBands(level):
             for pix in bandCol[0:level]:
                 if count > 8:
                     pixels[pix] = red
-                elif count > 6 and count < 9:
+                elif 6 < count < 9:
                     pixels[pix] = yellow
                 else:
                     pixels[pix] = green
@@ -126,7 +126,7 @@ blankDisplay()
 # Configure audio listener
 # Audio source is an Alesis Core 1 wth OTG connection to Raspberry Pi Zero 2 W
 # 3072Hz seems like a good sample size for smooth transitions and to reduce jitter
-audioSlice = 3072
+audioSlice = 2048
 # The Alesis Core 1 has a 48kHz input
 audioRate = 48000
 # Working in mono here
