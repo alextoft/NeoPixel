@@ -5,6 +5,8 @@ import pyaudio
 import audioop
 import threading
 import queue
+import os
+import signal
 
 
 def buildCols():
@@ -43,31 +45,19 @@ def blankDisplay():
     pixels.show()
 
 
-def showFullBands(level, bright):
-    pixels.fill((0, 0, 0))
+def showFullBands(level):
     # Take the list array and split into individual lists pertaining to each EQ band
     for eq in bands:
         # Now take the band list and split it into columns representing that band
         for bandCol in eq:
             # Then iterate over the pixels in each column which make up the band and turn them on
-            count = 0
             for pix in bandCol[0:level]:
-                if count > 8:
-                    pixels[pix] = red
-                elif 6 < count < 9:
-                    pixels[pix] = yellow
-                elif 4 < count < 7:
-                    pixels[pix] = green
-                elif 2 < count < 5:
-                    pixels[pix] = dgreen
-                elif 0 < count < 3:
-                    pixels[pix] = lgreen
-                elif count == 0:
-                    if bright == 1:
-                      pixels[pix] = purple
-                    elif bright == 0:
-                      pixels[pix] = fpurple
-                count += 1
+                pixels[pix] = green
+                if level < 12:
+                    for pix in bandCol[level:12]:
+                        pixels[pix] = off
+    if level == 0:
+        pixels.fill(off)
     pixels.show()
 
 
@@ -119,9 +109,8 @@ pixels = neopixel.NeoPixel(
 # LED Colours
 red = (255, 0, 0)
 yellow = (255, 255, 0)
-dgreen = (50, 205, 50)
 green = (0, 255, 0)
-lgreen = (173, 255, 47)
+blue = (0, 0, 255)
 purple = (128, 0, 128)
 fpurple = (64, 4, 62)
 off = (0, 0, 0)
@@ -133,16 +122,17 @@ bands = getBands(cols)
 
 # Give a visual indication flash that we're up and running
 print("Panel splash...")
-showFullBands(12,1)
-time.sleep(3)
+showFullBands(12)
+time.sleep(1)
 blankDisplay()
 
 # Configure audio listener
 # Audio source is an Alesis Core 1 wth OTG connection to Raspberry Pi Zero 2 W
-# 3072Hz seems like a good sample size for smooth transitions and to reduce jitter
-audioSlice = 4096
 # The Alesis Core 1 has a 48kHz input
 audioRate = 48000
+updatesPerSecond = 20
+audioSlice = round(audioRate / updatesPerSecond)
+
 # Working in mono here
 print(
     "\n##################################################################################################################\n" +
@@ -169,34 +159,39 @@ crms = int()
 audioMonitor = threading.Thread(target=setRms)
 audioMonitor.start()
 
-# Loop to evaluate RMS level by reading from thread queue
-while True:
-    if queue:
-        crms = queue.pop(0)
-        # print(crms)
-        if crms > 27000:
-            showFullBands(12,1)
-        elif crms > 25000:
-            showFullBands(11,1)
-        elif crms > 23000:
-            showFullBands(10,1)
-        elif crms > 21000:
-            showFullBands(9,1)
-        elif crms > 20000:
-            showFullBands(8,1)
-        elif crms > 19000:
-            showFullBands(7,1)
-        elif crms > 18000:
-            showFullBands(6,1)
-        elif crms > 17000:
-            showFullBands(5,1)
-        elif crms > 16000:
-            showFullBands(4,1)
-        elif crms > 15000:
-            showFullBands(3,1)
-        elif crms > 14000:
-            showFullBands(2,1)
-        elif crms > 5000:
-            showFullBands(1,1)
-        else:
-            showFullBands(1,0)
+try:
+    # Loop to evaluate RMS level by reading from thread queue
+    while True:
+        if queue:
+            crms = queue.pop(0)
+            print(crms)
+            if crms > 27000:
+                showFullBands(12)
+            elif crms > 25000:
+                showFullBands(11)
+            elif crms > 23000:
+                showFullBands(10)
+            elif crms > 21000:
+                showFullBands(9)
+            elif crms > 19000:
+                showFullBands(8)
+            elif crms > 17000:
+                showFullBands(7)
+            elif crms > 16000:
+                showFullBands(6)
+            elif crms > 15000:
+                showFullBands(5)
+            elif crms > 14000:
+                showFullBands(4)
+            elif crms > 12000:
+                showFullBands(3)
+            elif crms > 10000:
+                showFullBands(2)
+            elif crms > 7000:
+                showFullBands(1)
+            else:
+                showFullBands(1)
+except KeyboardInterrupt:
+    blankDisplay()
+    print("Killed by death! You are hereby....")
+    os.kill(os.getpid(), signal.SIGTERM)
