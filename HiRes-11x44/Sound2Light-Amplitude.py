@@ -52,7 +52,7 @@ def showFullBands(level):
         for bandCol in eq:
             # Then iterate over the pixels in each column which make up the band and turn them on
             for pix in bandCol[0:level]:
-                pixels[pix] = green
+                pixels[pix] = blue
                 if level < 12:
                     for pix in bandCol[level:12]:
                         pixels[pix] = off
@@ -81,7 +81,7 @@ def setRms():
     while True:
         stream.start_stream()
         data = stream.read(audioSlice)
-        # Make sure to stop the stream whilst we analyse it to avoid a buffer overrun
+        # Make sure to stop the stream whilst we analyse it to avoid a gradual buffer overrun building up in the thread queue
         stream.stop_stream()
         rms = audioop.rms(data, 2)
         queue.append(rms)
@@ -149,7 +149,7 @@ stream.stop_stream()
 time.sleep(1)
 print(
     "\n##################################################################################################################\n" +
-    "This should be the end of the ALSA/JackServer/PulseAudio errors, let's crack on with making some lights flash!\n" +
+    "This should be the end of the ALSA/JackServer/PulseAudio errors so let us crack on with making some lights flash!!\n" +
     "##################################################################################################################\n"
 )
 
@@ -158,6 +158,7 @@ queue = []
 crms = int()
 audioMonitor = threading.Thread(target=setRms)
 audioMonitor.start()
+print("Main processing loop starting...\nNo more console output as TCP latency over WiFi impacts performance. Go!")
 
 try:
     # Loop to evaluate RMS level by reading from thread queue
