@@ -140,7 +140,7 @@ blankDisplay()
 # Configure audio listener
 # Audio source is an Alesis Core 1 wth OTG connection to Raspberry Pi Zero 2 W
 # 3072Hz seems like a good sample size for smooth transitions and to reduce jitter
-audioSlice = 4006
+audioSlice = 4096
 # The Alesis Core 1 has a 48kHz input
 audioRate = 48000
 # Working in mono here
