@@ -164,7 +164,7 @@ try:
     while True:
         if queue:
             crms = queue.pop(0)
-            print(crms)
+            #print(crms)
             if crms > 27000:
                 showFullBands(12)
             elif crms > 25000:
